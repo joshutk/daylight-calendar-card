@@ -6,17 +6,24 @@ import type { ProcessedEvent } from './types';
 // ---------------------------------------------------------------------------
 
 /**
- * Find events that share the same `uid` across different calendar entities
- * and annotate them with `sharedWith` / `sharedColors`.
- * Mutates the input array in place and returns it.
+ * Find events that share the same `uid` across different calendar entities,
+ * then deduplicate: keep ONE representative event per shared uid and collect
+ * ALL participating calendar colors into `sharedColors`.
+ *
+ * Returns a new array (non-shared events pass through unchanged).
  */
-function detectSharedEvents(
+function deduplicateSharedEvents(
   events: ProcessedEvent[],
 ): ProcessedEvent[] {
   // Group events by uid (skip events without a uid)
   const byUid = new Map<string, ProcessedEvent[]>();
+  const noUid: ProcessedEvent[] = [];
+
   for (const ev of events) {
-    if (!ev.uid) continue;
+    if (!ev.uid) {
+      noUid.push(ev);
+      continue;
+    }
     let group = byUid.get(ev.uid);
     if (!group) {
       group = [];
@@ -25,22 +32,48 @@ function detectSharedEvents(
     group.push(ev);
   }
 
-  for (const [, group] of byUid) {
-    // Only mark as shared when the same uid appears in 2+ distinct calendars
-    const distinctCalendars = new Set(group.map((e) => e.calendarEntity));
-    if (distinctCalendars.size < 2) continue;
+  const result: ProcessedEvent[] = [...noUid];
 
-    for (const ev of group) {
-      ev.sharedWith = group
-        .filter((other) => other.calendarEntity !== ev.calendarEntity)
-        .map((other) => other.calendarEntity);
-      ev.sharedColors = group
-        .filter((other) => other.calendarEntity !== ev.calendarEntity)
-        .map((other) => other.color);
+  for (const [, group] of byUid) {
+    const distinctCalendars = new Set(group.map((e) => e.calendarEntity));
+
+    if (distinctCalendars.size < 2) {
+      // Not shared — but stabilize id on uid so it doesn't change
+      // if the event transitions between shared/non-shared via filters
+      const ev = group[0];
+      result.push({
+        ...ev,
+        id: `uid-${ev.uid}-${ev.start.toISOString()}`,
+      });
+      continue;
     }
+
+    // Deduplicate: keep only unique calendars (first occurrence wins)
+    const seen = new Set<string>();
+    const unique: ProcessedEvent[] = [];
+    for (const ev of group) {
+      if (!seen.has(ev.calendarEntity)) {
+        seen.add(ev.calendarEntity);
+        unique.push(ev);
+      }
+    }
+
+    // Create a fresh object for the representative so Lit detects changes
+    // when filters toggle (same base event, different sharedColors).
+    // Use uid-based id so the event identity is stable across filter changes.
+    const base = unique[0];
+    const uid = group[0].uid!;
+    result.push({
+      ...base,
+      id: `uid-${uid}-${base.start.toISOString()}`,
+      sharedWith: unique.slice(1).map((e) => e.calendarEntity),
+      sharedColors: unique.map((e) => e.color),
+      sharedCalendarNames: unique.map((e) => e.calendarName),
+      sharedAvatars: unique.map((e) => e.avatar),
+    });
   }
 
-  return events;
+  return result;
 }
 
 // ---------------------------------------------------------------------------
@@ -151,11 +184,11 @@ export function processEvents(events: ProcessedEvent[]): {
   timedEvents: ProcessedEvent[];
   allDayEvents: ProcessedEvent[];
 } {
-  detectSharedEvents(events);
-  assignColumns(events);
+  const deduped = deduplicateSharedEvents(events);
+  assignColumns(deduped);
 
   return {
-    timedEvents: events.filter((e) => !e.isAllDay),
-    allDayEvents: events.filter((e) => e.isAllDay),
+    timedEvents: deduped.filter((e) => !e.isAllDay),
+    allDayEvents: deduped.filter((e) => e.isAllDay),
   };
 }

@@ -28,7 +28,7 @@ export class DaylightEventTile extends LitElement {
   static styles = eventTileStyles;
 
   @property({ attribute: false }) event!: ProcessedEvent;
-  @property({ type: Boolean }) compact = false;
+  @property({ type: Boolean, reflect: true }) compact = false;
 
   private _onClick(): void {
     this.dispatchEvent(
@@ -48,6 +48,17 @@ export class DaylightEventTile extends LitElement {
     return pastelBackground(color);
   }
 
+  /** Render color dots for shared events */
+  private _renderCalendarDots() {
+    const { sharedColors } = this.event;
+    if (!sharedColors || sharedColors.length < 2) return '';
+    return html`
+      <div class="calendar-dots">
+        ${sharedColors.map(c => html`<span class="cal-dot" style="background:${c};"></span>`)}
+      </div>
+    `;
+  }
+
   protected render() {
     const bg = this._getBackground();
 
@@ -64,6 +75,7 @@ export class DaylightEventTile extends LitElement {
               <div class="time">
                 ${shortTimeRange(this.event.start, this.event.end)}
               </div>
+              ${this._renderCalendarDots()}
             `}
       </div>
     `;

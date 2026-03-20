@@ -58,18 +58,28 @@ export function pastelBackground(color: string): string {
 }
 
 /**
+ * Slightly higher opacity for stripe bands — makes adjacent colors
+ * more distinguishable while keeping the pastel look.
+ */
+function stripeBandBackground(color: string): string {
+  const { r, g, b } = hexToRgb(color);
+  return `rgba(${r}, ${g}, ${b}, 0.38)`;
+}
+
+/**
  * CSS for a diagonal stripe background (shared events across 2+ calendars).
+ * Wide bands (~36px each) to match Skylight 2.0's multi-calendar look.
  */
 export function stripeBackground(colors: string[]): string {
   if (colors.length < 2) return pastelBackground(colors[0]);
-  const stripeWidth = 8;
+  const bandWidth = 36; // px per color band
   const stops = colors
     .map((c, i) => {
-      const pastel = pastelBackground(c);
-      const start = (i / colors.length) * stripeWidth;
-      const end = ((i + 1) / colors.length) * stripeWidth;
-      return `${pastel} ${start}px, ${pastel} ${end}px`;
+      const band = stripeBandBackground(c);
+      const start = i * bandWidth;
+      const end = (i + 1) * bandWidth;
+      return `${band} ${start}px, ${band} ${end}px`;
     })
     .join(', ');
-  return `repeating-linear-gradient(45deg, ${stops})`;
+  return `repeating-linear-gradient(135deg, ${stops})`;
 }

@@ -3,7 +3,7 @@ import { customElement, property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { agendaViewStyles } from './styles/agenda-view.styles';
 import type { ProcessedEvent } from './types';
-import { pastelBackground } from './colors';
+import { pastelBackground, stripeBackground } from './colors';
 import { isToday, formatTimeRange, formatDayHeader } from './utils';
 
 interface DaySection {
@@ -66,16 +66,25 @@ export class DaylightAgendaView extends LitElement {
     );
   }
 
+  private _renderColorBar(ev: ProcessedEvent) {
+    const isShared = ev.sharedColors && ev.sharedColors.length >= 2;
+    if (!isShared) {
+      return html`<div class="event-color-bar" style="background: ${ev.color};"></div>`;
+    }
+    return html`
+      <div class="event-color-stack">
+        ${ev.sharedColors!.map(c => html`<div class="color-segment" style="background: ${c};"></div>`)}
+      </div>
+    `;
+  }
+
   private _renderEvent(ev: ProcessedEvent) {
     return html`
       <div
         class="agenda-event"
         @click=${() => this._fireClick(ev)}
       >
-        <div
-          class="event-color-bar"
-          style="background: ${ev.color};"
-        ></div>
+        ${this._renderColorBar(ev)}
         <div class="event-content">
           <div class="event-title">${ev.summary}</div>
           <div class="event-time">
@@ -104,16 +113,21 @@ export class DaylightAgendaView extends LitElement {
             ${section.allDay.length > 0 || section.timed.length > 0
               ? html`
                 <div class="day-events">
-                  ${repeat(section.allDay, ev => ev.id, ev => html`
-                    <div
-                      class="agenda-event all-day"
-                      @click=${() => this._fireClick(ev)}
-                    >
-                      <div class="event-chip" style="background: ${pastelBackground(ev.color)};">
-                        ${ev.summary}
+                  ${repeat(section.allDay, ev => ev.id, ev => {
+                    const chipBg = ev.sharedColors && ev.sharedColors.length >= 2
+                      ? stripeBackground(ev.sharedColors)
+                      : pastelBackground(ev.color);
+                    return html`
+                      <div
+                        class="agenda-event all-day"
+                        @click=${() => this._fireClick(ev)}
+                      >
+                        <div class="event-chip" style="background: ${chipBg};">
+                          ${ev.summary}
+                        </div>
                       </div>
-                    </div>
-                  `)}
+                    `;
+                  })}
                   ${repeat(section.timed, ev => ev.id, ev => this._renderEvent(ev))}
                 </div>
               `

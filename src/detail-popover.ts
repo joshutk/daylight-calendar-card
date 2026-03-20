@@ -38,26 +38,29 @@ export class DaylightDetailPopover extends LitElement {
 
     .popover {
       z-index: 1000;
-      width: 340px;
+      width: min(520px, 88vw);
+      max-height: 80vh;
+      overflow-y: auto;
       background: var(--card-background-color, #fff);
       color: var(--primary-text-color);
-      border-radius: 14px;
-      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.2), 0 2px 6px rgba(0, 0, 0, 0.08);
-      padding: 20px 22px;
+      border-radius: 18px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22), 0 4px 12px rgba(0, 0, 0, 0.08);
+      padding: 32px 36px;
       box-sizing: border-box;
+      position: relative;
     }
 
     .close-btn {
       position: absolute;
-      top: 8px;
-      right: 8px;
+      top: 14px;
+      right: 14px;
       background: none;
       border: none;
       cursor: pointer;
       color: var(--secondary-text-color);
-      font-size: 1.1em;
-      padding: 2px 6px;
-      border-radius: 4px;
+      font-size: calc(1.3em * var(--daylight-font-scale, 1));
+      padding: 4px 10px;
+      border-radius: 6px;
       line-height: 1;
     }
 
@@ -67,8 +70,8 @@ export class DaylightDetailPopover extends LitElement {
 
     .title {
       font-weight: 600;
-      font-size: 1.15em;
-      margin-bottom: 12px;
+      font-size: calc(1.3em * var(--daylight-font-scale, 1));
+      margin-bottom: 14px;
       padding-right: 28px;
       color: var(--primary-text-color);
     }
@@ -77,9 +80,9 @@ export class DaylightDetailPopover extends LitElement {
       display: flex;
       align-items: center;
       gap: 10px;
-      font-size: 0.95em;
+      font-size: calc(1.05em * var(--daylight-font-scale, 1));
       color: var(--primary-text-color);
-      margin-bottom: 8px;
+      margin-bottom: 10px;
     }
 
     .detail-row .icon {
@@ -89,21 +92,45 @@ export class DaylightDetailPopover extends LitElement {
       align-items: center;
     }
 
-    .description {
-      font-size: 0.9em;
-      color: var(--primary-text-color);
-      margin-top: 8px;
-      line-height: 1.4;
-      white-space: pre-wrap;
-      word-break: break-word;
+    .detail-row .icon svg {
+      width: calc(18px * var(--daylight-font-scale, 1));
+      height: calc(18px * var(--daylight-font-scale, 1));
     }
 
-    .calendar-name {
-      font-size: 0.75em;
+    .description {
+      font-size: calc(0.95em * var(--daylight-font-scale, 1));
+      color: var(--primary-text-color);
+      margin-top: 14px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+      background: var(--secondary-background-color, rgba(0, 0, 0, 0.04));
+      padding: 14px 16px;
+      border-radius: 10px;
+    }
+
+    .calendar-names {
+      font-size: calc(0.88em * var(--daylight-font-scale, 1));
       color: var(--secondary-text-color);
-      margin-top: 10px;
-      padding-top: 8px;
+      margin-top: 12px;
+      padding-top: 10px;
       border-top: 1px solid var(--divider-color, rgba(0, 0, 0, 0.08));
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .calendar-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .calendar-tag .tag-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
     }
   `;
 
@@ -166,7 +193,19 @@ export class DaylightDetailPopover extends LitElement {
         ${ev.description
           ? html`<div class="description">${ev.description}</div>`
           : nothing}
-        <div class="calendar-name">${ev.calendarName}</div>
+        <div class="calendar-names">
+          ${ev.sharedCalendarNames && ev.sharedCalendarNames.length >= 2
+            ? ev.sharedCalendarNames.map((name, i) => html`
+                <span class="calendar-tag">
+                  <span class="tag-dot" style="background: ${ev.sharedColors![i]};"></span>
+                  ${name}
+                </span>
+              `)
+            : html`<span class="calendar-tag">
+                <span class="tag-dot" style="background: ${ev.color};"></span>
+                ${ev.calendarName}
+              </span>`}
+        </div>
       </div>
       </div>
     `;

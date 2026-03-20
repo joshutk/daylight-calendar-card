@@ -36,7 +36,7 @@ export const timeGridStyles = css`
     position: absolute;
     right: 8px;
     transform: translateY(-50%);
-    font-size: 0.7em;
+    font-size: calc(0.75em * var(--daylight-font-scale, 1));
     color: var(--secondary-text-color);
     white-space: nowrap;
     pointer-events: none;
@@ -91,46 +91,38 @@ export const timeGridStyles = css`
     gap: 5px;
   }
 
-  .header-all-day-events {
+  /* All-day spanning row */
+  .all-day-row-wrapper {
     display: flex;
-    flex-direction: column;
-    gap: 2px;
-    margin-top: 4px;
-    max-height: 200px;
-    overflow: hidden;
-    transition: max-height 0.3s ease, margin-top 0.3s ease;
+    padding-bottom: 4px;
   }
 
-  .header-all-day-events.empty {
-    max-height: 0;
-    margin-top: 0;
+  .all-day-spanning-area {
+    display: grid;
+    flex: 1;
+    gap: 3px;
+    min-width: 0;
   }
 
-  .header-all-day-chip {
-    padding: 3px 6px;
+  .all-day-span-chip {
+    padding: 4px 8px;
     border-radius: 6px;
-    font-size: 0.75em;
+    font-size: calc(0.82em * var(--daylight-font-scale, 1));
     font-weight: 500;
     color: var(--primary-text-color);
     cursor: pointer;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    transition: opacity 0.3s ease, transform 0.3s ease;
+    min-width: 0;
   }
 
-  .header-all-day-chip.exiting,
-  .header-all-day-chip.entering {
-    opacity: 0;
-    transform: scale(0.92);
-  }
-
-  .header-all-day-chip:hover {
+  .all-day-span-chip:hover {
     filter: brightness(0.95);
   }
 
   .header-day-name {
-    font-size: 1.05em;
+    font-size: calc(1.1em * var(--daylight-font-scale, 1));
     font-weight: 600;
     color: var(--primary-text-color);
   }
@@ -140,7 +132,7 @@ export const timeGridStyles = css`
   }
 
   .header-day-number {
-    font-size: 1.05em;
+    font-size: calc(1.1em * var(--daylight-font-scale, 1));
     font-weight: 400;
     color: var(--secondary-text-color);
   }

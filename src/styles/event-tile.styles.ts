@@ -8,7 +8,7 @@ export const eventTileStyles = css`
   }
 
   .tile {
-    padding: 6px 10px;
+    padding: 5px 8px;
     border-radius: 8px;
     cursor: pointer;
     overflow: hidden;
@@ -16,27 +16,55 @@ export const eventTileStyles = css`
     transition: filter 0.15s;
     height: 100%;
     box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
   }
 
   .tile:hover {
     filter: brightness(0.95);
   }
 
+  :host([compact]) .tile {
+    padding: 2px 6px;
+  }
+
   .title {
     font-weight: bold;
-    font-size: 0.85em;
+    font-size: calc(0.92em * var(--daylight-font-scale, 1));
     color: var(--primary-text-color);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    flex-shrink: 0;
+  }
+
+  :host([compact]) .title {
+    font-size: calc(0.82em * var(--daylight-font-scale, 1));
   }
 
   .time {
-    font-size: 0.75em;
+    font-size: calc(0.82em * var(--daylight-font-scale, 1));
     color: var(--secondary-text-color);
     margin-top: 2px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    flex-shrink: 1;
+    min-height: 0;
+  }
+
+  .calendar-dots {
+    display: flex;
+    gap: 3px;
+    margin-top: 3px;
+    flex-shrink: 1;
+    min-height: 0;
+  }
+
+  .cal-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
   }
 `;

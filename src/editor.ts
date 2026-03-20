@@ -145,6 +145,17 @@ export class DaylightCalendarCardEditor extends LitElement {
           @value-changed=${this._valueChanged}
         ></ha-selector>
 
+        <!-- Font Scale -->
+        <ha-selector
+          .hass=${this.hass}
+          .label=${'Font Scale'}
+          .helper=${'Adjust text size across the card (1.0 = default, 1.3 = wall dashboard)'}
+          .selector=${{ number: { min: 0.8, max: 2.0, step: 0.1, mode: 'slider' } }}
+          .value=${this._config.font_scale ?? 1}
+          .configKey=${'font_scale'}
+          @value-changed=${this._valueChanged}
+        ></ha-selector>
+
         <!-- Show All-Day Events -->
         <ha-selector
           .hass=${this.hass}

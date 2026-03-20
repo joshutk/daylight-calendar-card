@@ -18,7 +18,7 @@ export const cardStyles = css`
   }
 
   .header-title {
-    font-size: 1.1em;
+    font-size: calc(1.15em * var(--daylight-font-scale, 1));
     font-weight: 500;
     color: var(--primary-text-color);
   }
@@ -36,7 +36,7 @@ export const cardStyles = css`
     padding: 4px 8px;
     border-radius: 4px;
     color: var(--primary-text-color);
-    font-size: 0.9em;
+    font-size: calc(0.95em * var(--daylight-font-scale, 1));
   }
 
   .header-nav button:hover {
@@ -57,7 +57,7 @@ export const cardStyles = css`
     cursor: pointer;
     padding: 4px 10px;
     border-radius: 4px;
-    font-size: 0.8em;
+    font-size: calc(0.85em * var(--daylight-font-scale, 1));
     color: var(--secondary-text-color);
     transition: background 0.15s, color 0.15s;
   }
@@ -84,7 +84,7 @@ export const cardStyles = css`
     border-radius: 20px;
     border: none;
     background: var(--secondary-background-color, rgba(0, 0, 0, 0.04));
-    font-size: 0.85em;
+    font-size: calc(0.9em * var(--daylight-font-scale, 1));
     font-weight: 500;
     color: var(--primary-text-color);
     white-space: nowrap;

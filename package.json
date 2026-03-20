@@ -1,6 +1,6 @@
 {
   "name": "daylight-calendar-card",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A clean, family-friendly calendar card for Home Assistant",
   "main": "daylight-calendar-card.js",
   "scripts": {

@@ -28,6 +28,16 @@ export interface DaylightCardConfig {
   show_legend?: boolean;
   show_current_time?: boolean;
   show_all_day?: boolean;
+  // Sizing
+  font_scale?: number; // multiplier, default 1.0
+  // Person mapping: calendar entity → person entity for avatars
+  calendar_persons?: Record<string, string>;
+}
+
+export interface CalendarAvatar {
+  initial: string;       // first letter of calendar name
+  color: string;         // calendar color
+  pictureUrl?: string;   // HA person entity picture, if mapped
 }
 
 export interface CalendarEventDateTime {
@@ -57,11 +67,14 @@ export interface ProcessedEvent {
   calendarEntity: string;
   calendarName: string;
   color: string;
+  avatar: CalendarAvatar;
   // Layout properties (set by EventProcessor)
   column?: number;
   totalColumns?: number;
   // Shared event (same UID across calendars)
   sharedWith?: string[]; // other calendar entity IDs
   sharedColors?: string[]; // colors for stripe rendering
+  sharedCalendarNames?: string[]; // friendly names for all participating calendars
+  sharedAvatars?: CalendarAvatar[]; // avatars for all participating calendars
 }
 

@@ -1,7 +1,7 @@
 import { LitElement, html, nothing, type PropertyValues } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { cardStyles } from './styles/card.styles';
-import type { HomeAssistant, DaylightCardConfig, ViewType, CalendarEvent, ProcessedEvent } from './types';
+import type { HomeAssistant, DaylightCardConfig, ViewType, CalendarEvent, ProcessedEvent, CalendarAvatar } from './types';
 import { getCalendarColor, DAYLIGHT_ACCENT } from './colors';
 import { processEvents } from './event-processor';
 import './time-grid';
@@ -41,6 +41,7 @@ export class DaylightCalendarCard extends LitElement {
   @state() private _currentView: ViewType = 'agenda';
   @state() private _referenceDate: Date = new Date();
   @state() private _events: ProcessedEvent[] = [];
+  @state() private _processedEvents: ProcessedEvent[] = [];
   @state() private _timedEvents: ProcessedEvent[] = [];
   @state() private _allDayEvents: ProcessedEvent[] = [];
   @state() private _loading = false;
@@ -154,6 +155,7 @@ export class DaylightCalendarCard extends LitElement {
     try {
       const fetches = this._config.entities.map(async (entityId, index) => {
         const color = getCalendarColor(this.hass, entityId, index, this._getPalette());
+        const avatar = this._getAvatar(entityId, color);
         const events = await this.hass.callApi<CalendarEvent[]>(
           'GET',
           `calendars/${entityId}${params}`,
@@ -174,6 +176,7 @@ export class DaylightCalendarCard extends LitElement {
             calendarEntity: entityId,
             calendarName: this._getCalendarName(entityId),
             color,
+            avatar,
           };
         });
       });
@@ -269,6 +272,7 @@ export class DaylightCalendarCard extends LitElement {
       ? this._events.filter(ev => !this._hiddenCalendars.has(ev.calendarEntity))
       : this._events;
     const processed = processEvents([...visible]);
+    this._processedEvents = [...processed.timedEvents, ...processed.allDayEvents];
     this._timedEvents = processed.timedEvents;
     this._allDayEvents = processed.allDayEvents;
   }
@@ -283,6 +287,24 @@ export class DaylightCalendarCard extends LitElement {
     return friendlyName ?? entityId.replace('calendar.', '');
   }
 
+  private _getAvatar(entityId: string, color: string): CalendarAvatar {
+    const name = this._getCalendarName(entityId);
+    const initial = name.charAt(0).toUpperCase();
+    const avatar: CalendarAvatar = { initial, color };
+
+    // Check for mapped person entity
+    const personId = this._config?.calendar_persons?.[entityId];
+    if (personId) {
+      const person = this.hass?.states[personId];
+      const pic = person?.attributes?.entity_picture as string | undefined;
+      if (pic) {
+        avatar.pictureUrl = pic;
+      }
+    }
+
+    return avatar;
+  }
+
   private _onPopoverClose(): void {
     this._popoverEvent = null;
   }
@@ -293,15 +315,11 @@ export class DaylightCalendarCard extends LitElement {
     this._currentView = 'agenda';
   }
 
-  private _visibleEvents(): ProcessedEvent[] {
-    return this._events.filter(ev => !this._hiddenCalendars.has(ev.calendarEntity));
-  }
-
   private _renderContent() {
     if (this._currentView === 'month') {
       return html`
         <daylight-month-grid
-          .events=${this._visibleEvents()}
+          .events=${this._processedEvents}
           .referenceDate=${this._referenceDate}
           @tile-click=${this._onTileClick}
           @more-click=${this._onMoreClick}
@@ -312,7 +330,7 @@ export class DaylightCalendarCard extends LitElement {
     if (this._currentView === 'agenda') {
       return html`
         <daylight-agenda-view
-          .events=${this._visibleEvents()}
+          .events=${this._processedEvents}
           .referenceDate=${this._referenceDate}
           .days=${this._getAgendaDays()}
           @tile-click=${this._onTileClick}
@@ -356,7 +374,7 @@ export class DaylightCalendarCard extends LitElement {
     const enabledViews = this._getEnabledViews();
 
     return html`
-      <ha-card style="--daylight-accent: ${this._getPalette() === 'daylight' ? DAYLIGHT_ACCENT : 'var(--primary-color, #03a9f4)'}">
+      <ha-card style="--daylight-accent: ${this._getPalette() === 'daylight' ? DAYLIGHT_ACCENT : 'var(--primary-color, #03a9f4)'}; --daylight-font-scale: ${this._config.font_scale ?? 1};">
         <div class="header">
           <div class="header-nav">
             <button @click=${() => this._navigate(-1)}>&lsaquo;</button>
@@ -383,6 +401,7 @@ export class DaylightCalendarCard extends LitElement {
           ${this._config.entities.map(
             (entityId, index) => {
               const hidden = this._hiddenCalendars.has(entityId);
+              const color = getCalendarColor(this.hass, entityId, index, this._getPalette());
               return html`
                 <button
                   class="legend-item ${hidden ? 'hidden' : ''}"
@@ -390,7 +409,7 @@ export class DaylightCalendarCard extends LitElement {
                 >
                   <span
                     class="legend-dot"
-                    style="background: ${hidden ? 'transparent' : getCalendarColor(this.hass, entityId, index, this._getPalette())}; border: 2px solid ${getCalendarColor(this.hass, entityId, index, this._getPalette())};"
+                    style="background: ${hidden ? 'transparent' : color}; border: 2px solid ${color};"
                   ></span>
                   ${this._getCalendarName(entityId)}
                 </button>

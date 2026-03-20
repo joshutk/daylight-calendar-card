@@ -3,7 +3,7 @@ import { customElement, property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { timeGridStyles } from './styles/time-grid.styles';
 import type { ProcessedEvent } from './types';
-import { pastelBackground } from './colors';
+import { pastelBackground, stripeBackground } from './colors';
 import { isToday } from './utils';
 import './event-tile';
 
@@ -80,6 +80,14 @@ export class DaylightTimeGrid extends LitElement {
 
     // Handle departures: keep ALL events at old positions during fade-out,
     // then switch to new positions so CSS transitions animate the reflow.
+    // If a transition is already in progress (rapid toggling), cancel it
+    // and snap directly to the latest state.
+    if (this._exitTimer) {
+      clearTimeout(this._exitTimer);
+      this._exitTimer = undefined;
+      this._exitingIds.clear();
+    }
+
     if (departed.length > 0) {
       // Phase 1: render previous events at their old column positions
       this._renderEvents = [...(prevTimed ?? [])];
@@ -93,11 +101,11 @@ export class DaylightTimeGrid extends LitElement {
         }
         this.requestUpdate();
 
-        if (this._exitTimer) clearTimeout(this._exitTimer);
         // Phase 3: after fade-out, switch to new events with new column layout
         // — CSS transitions on left/width animate remaining events into place
         this._exitTimer = window.setTimeout(() => {
           this._exitingIds.clear();
+          this._exitTimer = undefined;
           this._renderEvents = [...this.events];
           this._renderAllDayEvents = [...this.allDayEvents];
           this.requestUpdate();
@@ -106,6 +114,7 @@ export class DaylightTimeGrid extends LitElement {
     } else {
       this._renderEvents = [...this.events];
       this._renderAllDayEvents = [...this.allDayEvents];
+      this.requestUpdate();
     }
 
     // Handle arrivals
@@ -201,13 +210,40 @@ export class DaylightTimeGrid extends LitElement {
     return days;
   }
 
-  private _allDayEventsForDay(day: Date): ProcessedEvent[] {
+  /**
+   * Compute spanning layout for all-day events across visible days.
+   * Returns events with startCol/endCol (0-based) relative to the days array.
+   */
+  private _getSpanningAllDayEvents(days: Date[]): Array<{
+    event: ProcessedEvent;
+    startCol: number;
+    endCol: number; // exclusive
+  }> {
     const source = this._renderAllDayEvents.length > 0 ? this._renderAllDayEvents : this.allDayEvents;
-    const dayStart = new Date(day);
-    dayStart.setHours(0, 0, 0, 0);
-    const dayEnd = new Date(day);
-    dayEnd.setHours(23, 59, 59, 999);
-    return source.filter(ev => ev.start < dayEnd && ev.end > dayStart);
+    const result: Array<{ event: ProcessedEvent; startCol: number; endCol: number }> = [];
+
+    for (const ev of source) {
+      let startCol = -1;
+      let endCol = -1;
+
+      for (let i = 0; i < days.length; i++) {
+        const dayStart = new Date(days[i]);
+        dayStart.setHours(0, 0, 0, 0);
+        const dayEnd = new Date(days[i]);
+        dayEnd.setHours(23, 59, 59, 999);
+
+        if (ev.start < dayEnd && ev.end > dayStart) {
+          if (startCol === -1) startCol = i;
+          endCol = i + 1;
+        }
+      }
+
+      if (startCol !== -1) {
+        result.push({ event: ev, startCol, endCol });
+      }
+    }
+
+    return result;
   }
 
   private _formatHour(hour: number): string {
@@ -218,16 +254,50 @@ export class DaylightTimeGrid extends LitElement {
 
   // --- rendering ---
 
-  private _renderAllDayChips(events: ProcessedEvent[]) {
+  private _renderDayHeader(day: Date) {
     return html`
-      <div class="header-all-day-events ${events.length === 0 ? 'empty' : ''}">
-        ${repeat(events, ev => ev.id, ev => {
-          const exiting = this._exitingIds.has(ev.id);
-          const entering = this._enteringIds.has(ev.id);
+      <div class="multi-day-header ${isToday(day) ? 'today' : ''}">
+        <div class="header-label-row">
+          <span class="header-day-name">${DAY_NAMES[day.getDay()]}</span>
+          <span class="header-day-number ${isToday(day) ? 'today-badge' : ''}">${day.getDate()}</span>
+        </div>
+      </div>
+    `;
+  }
+
+  private _renderAllDayRow(days: Date[]) {
+    const spanning = this._getSpanningAllDayEvents(days);
+    if (spanning.length === 0) return nothing;
+
+    // Row-pack events to avoid overlaps (greedy top-down)
+    const rows: Array<Array<typeof spanning[0]>> = [];
+    for (const item of spanning) {
+      let placed = false;
+      for (const row of rows) {
+        if (row.every(r => r.endCol <= item.startCol || r.startCol >= item.endCol)) {
+          row.push(item);
+          placed = true;
+          break;
+        }
+      }
+      if (!placed) {
+        rows.push([item]);
+      }
+    }
+
+    return html`
+      <div class="all-day-spanning-area" style="grid-template-columns: repeat(${days.length}, 1fr);">
+        ${rows.map((row, rowIdx) => row.map(({ event: ev, startCol, endCol }) => {
+          const isShared = ev.sharedColors && ev.sharedColors.length >= 2;
+          const bg = isShared ? stripeBackground(ev.sharedColors!) : pastelBackground(ev.color);
           return html`
             <div
-              class="header-all-day-chip ${exiting ? 'exiting' : entering ? 'entering' : ''}"
-              style="background: ${pastelBackground(ev.color)};"
+              class="all-day-span-chip"
+              style="
+                grid-column: ${startCol + 1} / ${endCol + 1};
+                grid-row: ${rowIdx + 1};
+                background: ${bg};
+              "
               @click=${() => this.dispatchEvent(new CustomEvent('tile-click', {
                 bubbles: true,
                 composed: true,
@@ -237,19 +307,7 @@ export class DaylightTimeGrid extends LitElement {
               ${ev.summary}
             </div>
           `;
-        })}
-      </div>
-    `;
-  }
-
-  private _renderDayHeader(day: Date) {
-    return html`
-      <div class="multi-day-header ${isToday(day) ? 'today' : ''}">
-        <div class="header-label-row">
-          <span class="header-day-name">${DAY_NAMES[day.getDay()]}</span>
-          <span class="header-day-number ${isToday(day) ? 'today-badge' : ''}">${day.getDate()}</span>
-        </div>
-        ${this._renderAllDayChips(this._allDayEventsForDay(day))}
+        }))}
       </div>
     `;
   }
@@ -259,6 +317,10 @@ export class DaylightTimeGrid extends LitElement {
       <div class="multi-day-headers">
         <div class="time-axis-spacer"></div>
         ${days.map(d => this._renderDayHeader(d))}
+      </div>
+      <div class="all-day-row-wrapper">
+        <div class="time-axis-spacer"></div>
+        ${this._renderAllDayRow(days)}
       </div>
     `;
   }
@@ -317,7 +379,7 @@ export class DaylightTimeGrid extends LitElement {
       >
         <daylight-event-tile
           .event=${ev}
-          ?compact=${height < 40}
+          ?compact=${height < 48}
         ></daylight-event-tile>
       </div>
     `;
