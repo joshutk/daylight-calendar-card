@@ -1,0 +1,9 @@
+node_modules/
+dist/
+config/
+.env
+*.js.map
+
+# Built output (HACS downloads from GitHub Releases, not repo tree)
+daylight-calendar-card.js
+ha-skylight-card.js
