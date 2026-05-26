@@ -21,7 +21,7 @@ export const eventTileStyles = css`
   }
 
   .tile:hover {
-    filter: brightness(0.95);
+    filter: var(--daylight-tile-hover-filter, brightness(0.95));
   }
 
   :host([compact]) .tile {
@@ -51,6 +51,27 @@ export const eventTileStyles = css`
     text-overflow: ellipsis;
     flex-shrink: 1;
     min-height: 0;
+  }
+
+  .compact-row {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .compact-row .title {
+    flex-shrink: 1;
+    min-width: 0;
+  }
+
+  .compact-time {
+    font-size: calc(0.78em * var(--daylight-font-scale, 1));
+    color: var(--secondary-text-color);
+    white-space: nowrap;
+    flex-shrink: 0;
+    margin-left: auto;
   }
 
   .calendar-dots {

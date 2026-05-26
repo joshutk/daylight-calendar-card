@@ -110,7 +110,7 @@ export const monthGridStyles = css`
   }
 
   .event-chip:hover {
-    filter: brightness(0.92);
+    filter: var(--daylight-tile-hover-filter, brightness(0.92));
   }
 
   .more-chip {
