@@ -78,9 +78,10 @@ export class DaylightCalendarCardEditor extends LitElement {
         <ha-selector
           .hass=${this.hass}
           .label=${'Color Palette'}
+          .helper=${'"Home Assistant" uses each calendar\'s color from Settings → the Calendar dashboard\'s color picker. Requires an admin account.'}
           .selector=${{ select: { options: [
             { value: 'daylight', label: 'Daylight (coral, sage, sky...)' },
-            { value: 'ha',       label: 'Home Assistant (entity colors + theme)' },
+            { value: 'ha',       label: 'Home Assistant (calendar colors)' },
           ]}}}
           .value=${this._config.color_palette ?? 'daylight'}
           .configKey=${'color_palette'}
@@ -173,6 +174,17 @@ export class DaylightCalendarCardEditor extends LitElement {
           .selector=${{ boolean: {} }}
           .value=${this._config.show_current_time !== false}
           .configKey=${'show_current_time'}
+          @value-changed=${this._valueChanged}
+        ></ha-selector>
+
+        <!-- Refresh Interval -->
+        <ha-selector
+          .hass=${this.hass}
+          .label=${'Refresh Interval (minutes)'}
+          .helper=${'Reload events and advance to the next day automatically. 0 disables.'}
+          .selector=${{ number: { min: 0, max: 60, step: 1, mode: 'box' } }}
+          .value=${this._config.refresh_interval ?? 5}
+          .configKey=${'refresh_interval'}
           @value-changed=${this._valueChanged}
         ></ha-selector>
 

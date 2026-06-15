@@ -1,5 +1,3 @@
-import type { HomeAssistant } from './types';
-
 // Daylight-inspired default palette
 const DEFAULT_PALETTE = [
   '#E8858A', // coral pink
@@ -14,21 +12,83 @@ const DEFAULT_PALETTE = [
 export const DAYLIGHT_ACCENT = '#E8858A';
 
 /**
+ * Hex fallbacks for HA's stock color-picker names, used when the active
+ * theme doesn't define a `--{name}-color` CSS variable for that name.
+ * Matches the Material Design 500 shades HA ships by default.
+ */
+const HA_NAMED_COLOR_HEX: Record<string, string> = {
+  red: '#f44336',
+  pink: '#e91e63',
+  purple: '#9c27b0',
+  'deep-purple': '#673ab7',
+  indigo: '#3f51b5',
+  blue: '#2196f3',
+  'light-blue': '#03a9f4',
+  cyan: '#00bcd4',
+  teal: '#009688',
+  green: '#4caf50',
+  'light-green': '#8bc34a',
+  lime: '#cddc39',
+  yellow: '#ffeb3b',
+  amber: '#ffc107',
+  orange: '#ff9800',
+  'deep-orange': '#ff5722',
+  brown: '#795548',
+  grey: '#9e9e9e',
+  gray: '#9e9e9e',
+  'blue-grey': '#607d8b',
+  'blue-gray': '#607d8b',
+  black: '#000000',
+  white: '#ffffff',
+  disabled: '#bdbdbd',
+};
+
+/** Hex fallbacks for `primary`/`accent` when the active theme doesn't define them. */
+const HA_THEME_COLOR_FALLBACK: Record<string, string> = {
+  primary: '#03a9f4',
+  accent: '#ff9800',
+};
+
+/**
+ * Resolve a Home Assistant calendar color (from the entity registry's
+ * `options.calendar.color`) to a hex string.
+ *
+ * - Hex values pass through as-is.
+ * - Every other name (including `primary`/`accent` and all of HA's stock
+ *   color-picker names — red, indigo, light-blue, etc.) is first looked up
+ *   as the theme's `--{name}-color` CSS variable, so calendars stay
+ *   consistent with however the active theme groups/recolors those names
+ *   (e.g. the Daylight theme maps indigo/blue/light-blue to the same sky
+ *   blue). If the theme doesn't define that variable, falls back to HA's
+ *   stock Material color for that name.
+ */
+export function resolveHaColor(raw: string): string {
+  if (raw.startsWith('#')) return raw;
+
+  const key = raw.replace(/_/g, '-');
+  const themed = getComputedStyle(document.documentElement).getPropertyValue(`--${key}-color`).trim();
+  if (themed) return themed;
+
+  return HA_THEME_COLOR_FALLBACK[key] ?? HA_NAMED_COLOR_HEX[key] ?? DEFAULT_PALETTE[0];
+}
+
+/**
  * Resolve a calendar entity's display color.
  *
- * - `'daylight'` palette (default): always use Daylight-inspired colors, ignoring HA entity color
- * - `'ha'` palette: prefer the HA entity's `color` attribute, fall back to Daylight palette
+ * - `'daylight'` palette (default): always use Daylight-inspired colors
+ * - `'ha'` palette: use the calendar's color set in HA (via `haColors`,
+ *   resolved from the entity registry), falling back to the Daylight palette
+ *   for calendars that haven't had a color assigned
  */
 export function getCalendarColor(
-  hass: HomeAssistant,
   entityId: string,
   index: number,
   palette: 'daylight' | 'ha' = 'daylight',
+  haColors?: Record<string, string>,
 ): string {
   if (palette === 'ha') {
-    const entity = hass.states[entityId];
-    const attrColor = entity?.attributes?.color as string | undefined;
-    if (attrColor) return attrColor;
+    const resolved = haColors?.[entityId];
+    if (resolved) return resolved;
   }
   return DEFAULT_PALETTE[index % DEFAULT_PALETTE.length];
 }

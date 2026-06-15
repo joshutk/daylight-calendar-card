@@ -100,7 +100,8 @@ export const timeGridStyles = css`
   .all-day-spanning-area {
     display: grid;
     flex: 1;
-    gap: 3px;
+    row-gap: 3px;
+    column-gap: 1px;
     min-width: 0;
   }
 

@@ -46,7 +46,7 @@ Choose between two palettes:
 | Palette | Description |
 |---------|-------------|
 | **Daylight** (default) | A curated set of soft, readable colors — coral, sage, sky blue, lavender, peach, mint |
-| **Home Assistant** | Uses your calendar entity colors and the HA theme's `--primary-color` |
+| **Home Assistant** | Uses each calendar's color as set in HA's Calendar dashboard (the colored dot next to each calendar). Falls back to the Daylight palette for any calendar without a color set, and requires an admin account to read — non-admin users (e.g. a kiosk user) silently fall back to Daylight. |
 
 <!-- Screenshot: Side-by-side comparison of Daylight vs HA palette -->
 ![Color Palettes](https://via.placeholder.com/600x250?text=Daylight+vs+HA+Palette)
@@ -144,6 +144,9 @@ show_legend: true             # calendar legend bar
 show_all_day: true            # all-day events in multi-day view
 show_current_time: true       # "now" indicator line
 
+# Auto-refresh
+refresh_interval: 5           # minutes between event reloads / day-advance checks, 0 disables
+
 # Advanced (time grid)
 grid_height: 500              # max height in px (200–1200)
 pixels_per_hour: 60           # vertical density (40–120)
@@ -164,6 +167,7 @@ hour_end: 20                  # fixed end hour (1–24), omit for auto
 | `show_legend` | boolean | `true` | Show the calendar legend |
 | `show_all_day` | boolean | `true` | Show all-day events in Multi-Day headers |
 | `show_current_time` | boolean | `true` | Show the current time indicator |
+| `refresh_interval` | number | `5` | Minutes between event reloads / day-advance checks. `0` disables |
 | `grid_height` | number | `500` | Max height of the time grid in pixels |
 | `pixels_per_hour` | number | `60` | Vertical pixels per hour in the time grid |
 | `hour_start` | number | auto | Fixed start hour for the time grid |

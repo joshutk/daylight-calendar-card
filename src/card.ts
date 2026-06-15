@@ -2,8 +2,9 @@ import { LitElement, html, nothing, type PropertyValues } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { cardStyles } from './styles/card.styles';
 import type { HomeAssistant, DaylightCardConfig, ViewType, CalendarEvent, ProcessedEvent, CalendarAvatar } from './types';
-import { getCalendarColor, DAYLIGHT_ACCENT } from './colors';
+import { getCalendarColor, resolveHaColor, DAYLIGHT_ACCENT } from './colors';
 import { processEvents } from './event-processor';
+import { isToday } from './utils';
 import './time-grid';
 import './month-grid';
 import './agenda-view';
@@ -37,6 +38,9 @@ export class DaylightCalendarCard extends LitElement {
   }
 
   private _hasFetched = false;
+  private _haColorsPromise?: Promise<void>;
+  private _followingToday = true;
+  private _refreshTimer?: number;
   @state() private _config!: DaylightCardConfig;
   @state() private _currentView: ViewType = 'agenda';
   @state() private _referenceDate: Date = new Date();
@@ -48,6 +52,7 @@ export class DaylightCalendarCard extends LitElement {
   @state() private _error = '';
   @state() private _popoverEvent: ProcessedEvent | null = null;
   @state() private _hiddenCalendars: Set<string> = new Set();
+  @state() private _haColors: Record<string, string> = {};
 
   // HA card lifecycle
   setConfig(config: DaylightCardConfig): void {
@@ -69,6 +74,7 @@ export class DaylightCalendarCard extends LitElement {
     if (this._hass) {
       this._fetchEvents();
     }
+    this._startRefreshTimer();
   }
 
   getCardSize(): number {
@@ -146,6 +152,8 @@ export class DaylightCalendarCard extends LitElement {
     if (!this._hass || !this._config) return;
     this._hasFetched = true;
 
+    await this._fetchHaColors();
+
     const { start, end } = this._getDateRange();
     const params = encodeURI(`?start=${start.toISOString()}&end=${end.toISOString()}`);
 
@@ -154,7 +162,7 @@ export class DaylightCalendarCard extends LitElement {
 
     try {
       const fetches = this._config.entities.map(async (entityId, index) => {
-        const color = getCalendarColor(this.hass, entityId, index, this._getPalette());
+        const color = getCalendarColor(entityId, index, this._getPalette(), this._haColors);
         const avatar = this._getAvatar(entityId, color);
         const events = await this.hass.callApi<CalendarEvent[]>(
           'GET',
@@ -212,10 +220,12 @@ export class DaylightCalendarCard extends LitElement {
         ref.setMonth(ref.getMonth() + direction);
         break;
     }
+    this._followingToday = false;
     this._referenceDate = ref;
   }
 
   private _goToday(): void {
+    this._followingToday = true;
     this._referenceDate = new Date();
   }
 
@@ -281,6 +291,36 @@ export class DaylightCalendarCard extends LitElement {
     return this._config?.color_palette ?? 'daylight';
   }
 
+  /**
+   * Look up each calendar's color from the HA entity registry
+   * (`options.calendar.color`, set via the color dot in HA's Calendar
+   * dashboard). Requires admin privileges — if the lookup fails (e.g. a
+   * non-admin kiosk user), affected calendars silently fall back to the
+   * Daylight palette.
+   */
+  private _fetchHaColors(): Promise<void> {
+    if (this._getPalette() !== 'ha') return Promise.resolve();
+    if (!this._haColorsPromise) {
+      this._haColorsPromise = (async () => {
+        const colors: Record<string, string> = {};
+        await Promise.all(this._config.entities.map(async (entityId) => {
+          try {
+            const entry = await this.hass.callWS<{ options?: { calendar?: { color?: string } } }>({
+              type: 'config/entity_registry/get',
+              entity_id: entityId,
+            });
+            const raw = entry?.options?.calendar?.color;
+            if (raw) colors[entityId] = resolveHaColor(raw);
+          } catch {
+            // Fall back to the Daylight palette for this calendar.
+          }
+        }));
+        this._haColors = colors;
+      })();
+    }
+    return this._haColorsPromise;
+  }
+
   private _getCalendarName(entityId: string): string {
     const entity = this.hass?.states[entityId];
     const friendlyName = entity?.attributes?.friendly_name as string | undefined;
@@ -305,12 +345,21 @@ export class DaylightCalendarCard extends LitElement {
     return avatar;
   }
 
+  private _shouldShowLegend(): boolean {
+    const cfg = this._config.show_legend;
+    if (cfg === true) return true;
+    if (cfg === false) return false;
+    // Auto: show only if 2+ entities
+    return this._config.entities.length >= 2;
+  }
+
   private _onPopoverClose(): void {
     this._popoverEvent = null;
   }
 
   private _onMoreClick(e: CustomEvent): void {
     const { date } = e.detail as { date: Date };
+    this._followingToday = isToday(date);
     this._referenceDate = date;
     this._currentView = 'agenda';
   }
@@ -360,6 +409,40 @@ export class DaylightCalendarCard extends LitElement {
     if (this._hass && this._config && !this._hasFetched) {
       this._fetchEvents();
     }
+    this._startRefreshTimer();
+  }
+
+  disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this._stopRefreshTimer();
+  }
+
+  /**
+   * Periodically reload events so new/changed events appear without a
+   * manual dashboard refresh, and so the view advances to the next day
+   * (when not manually navigated away from "today") without a reload.
+   */
+  private _startRefreshTimer(): void {
+    this._stopRefreshTimer();
+    const minutes = this._config?.refresh_interval ?? 5;
+    if (!minutes || minutes <= 0) return;
+    this._refreshTimer = window.setInterval(() => this._onRefreshTick(), minutes * 60 * 1000);
+  }
+
+  private _stopRefreshTimer(): void {
+    if (this._refreshTimer !== undefined) {
+      window.clearInterval(this._refreshTimer);
+      this._refreshTimer = undefined;
+    }
+  }
+
+  private _onRefreshTick(): void {
+    if (this._followingToday && !isToday(this._referenceDate)) {
+      // updated() will pick up the referenceDate change and re-fetch events.
+      this._referenceDate = new Date();
+      return;
+    }
+    this._fetchEvents();
   }
 
   protected render() {
@@ -397,11 +480,11 @@ export class DaylightCalendarCard extends LitElement {
             </div>
           ` : nothing}
         </div>
-        ${this._config.show_legend !== false ? html`<div class="legend">
+        ${this._shouldShowLegend() ? html`<div class="legend">
           ${this._config.entities.map(
             (entityId, index) => {
               const hidden = this._hiddenCalendars.has(entityId);
-              const color = getCalendarColor(this.hass, entityId, index, this._getPalette());
+              const color = getCalendarColor(entityId, index, this._getPalette(), this._haColors);
               return html`
                 <button
                   class="legend-item ${hidden ? 'hidden' : ''}"

@@ -1,4 +1,4 @@
-import { LitElement, html } from 'lit';
+import { LitElement, html, nothing } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { agendaViewStyles } from './styles/agenda-view.styles';
@@ -78,6 +78,19 @@ export class DaylightAgendaView extends LitElement {
     `;
   }
 
+  private _renderNameChips(ev: ProcessedEvent) {
+    if (!ev.sharedCalendarNames || ev.sharedCalendarNames.length < 2) return nothing;
+    return html`
+      <div class="name-chips">
+        ${ev.sharedCalendarNames.map((name, i) => html`
+          <span class="name-chip" style="background: ${pastelBackground(ev.sharedColors![i])};">
+            ${name}
+          </span>
+        `)}
+      </div>
+    `;
+  }
+
   private _renderEvent(ev: ProcessedEvent) {
     return html`
       <div
@@ -91,6 +104,7 @@ export class DaylightAgendaView extends LitElement {
             ${ev.isAllDay ? 'All day' : formatTimeRange(ev.start, ev.end)}
           </div>
         </div>
+        ${this._renderNameChips(ev)}
       </div>
     `;
   }

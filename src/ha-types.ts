@@ -4,6 +4,7 @@
 export interface HomeAssistant {
   states: Record<string, HassEntity>;
   callApi: <T>(method: string, path: string, parameters?: Record<string, unknown>) => Promise<T>;
+  callWS: <T>(msg: Record<string, unknown>) => Promise<T>;
   themes: {
     darkMode: boolean;
   };

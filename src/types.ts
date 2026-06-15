@@ -28,6 +28,8 @@ export interface DaylightCardConfig {
   show_legend?: boolean;
   show_current_time?: boolean;
   show_all_day?: boolean;
+  // Auto-refresh: minutes between event reloads / day-advance checks. 0 disables.
+  refresh_interval?: number;
   // Sizing
   font_scale?: number; // multiplier, default 1.0
   // Person mapping: calendar entity → person entity for avatars

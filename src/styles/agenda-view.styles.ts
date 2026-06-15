@@ -90,6 +90,7 @@ export const agendaViewStyles = css`
     flex-direction: column;
     gap: 2px;
     min-width: 0;
+    flex: 1;
   }
 
   .event-title {
@@ -120,6 +121,25 @@ export const agendaViewStyles = css`
     overflow: hidden;
     text-overflow: ellipsis;
     width: 100%;
+  }
+
+  .name-chips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+    max-width: 50%;
+    flex-shrink: 0;
+  }
+
+  .name-chip {
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: calc(0.75em * var(--daylight-font-scale, 1));
+    font-weight: 500;
+    color: var(--primary-text-color);
+    white-space: nowrap;
   }
 
   .no-events {

@@ -68,10 +68,15 @@ export class DaylightEventTile extends LitElement {
         style="background: ${bg}; --tile-color: ${this.event.color};"
         @click=${this._onClick}
       >
-        <div class="title">${this.event.summary}</div>
         ${this.compact
-          ? ''
+          ? html`
+              <div class="compact-row">
+                <span class="title">${this.event.summary}</span>
+                <span class="compact-time">${shortTimeRange(this.event.start, this.event.end)}</span>
+              </div>
+            `
           : html`
+              <div class="title">${this.event.summary}</div>
               <div class="time">
                 ${shortTimeRange(this.event.start, this.event.end)}
               </div>

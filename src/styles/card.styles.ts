@@ -14,6 +14,8 @@ export const cardStyles = css`
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
     margin-bottom: 12px;
   }
 
@@ -21,12 +23,16 @@ export const cardStyles = css`
     font-size: calc(1.15em * var(--daylight-font-scale, 1));
     font-weight: 500;
     color: var(--primary-text-color);
+    flex: 1;
+    min-width: 0;
+    text-align: center;
   }
 
   .header-nav {
     display: flex;
     align-items: center;
     gap: 4px;
+    flex-shrink: 0;
   }
 
   .header-nav button {
@@ -49,6 +55,7 @@ export const cardStyles = css`
     background: var(--secondary-background-color, rgba(0, 0, 0, 0.05));
     border-radius: 6px;
     padding: 2px;
+    flex-shrink: 0;
   }
 
   .view-toggle button {
@@ -127,5 +134,23 @@ export const cardStyles = css`
     height: 200px;
     color: var(--secondary-text-color);
     font-style: italic;
+  }
+
+  @media (max-width: 460px) {
+    .header-nav {
+      order: 1;
+    }
+
+    .header-title {
+      order: 2;
+      flex: 1;
+      text-align: center;
+    }
+
+    .view-toggle {
+      order: 3;
+      width: 100%;
+      justify-content: center;
+    }
   }
 `;
