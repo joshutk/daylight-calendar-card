@@ -52,6 +52,7 @@ export class DaylightCalendarCard extends LitElement {
   @state() private _error = '';
   @state() private _popoverEvent: ProcessedEvent | null = null;
   @state() private _hiddenCalendars: Set<string> = new Set();
+  @state() private _showHiddenInLegend = false;
   @state() private _haColors: Record<string, string> = {};
 
   // HA card lifecycle
@@ -63,7 +64,6 @@ export class DaylightCalendarCard extends LitElement {
       ? config.entities
       : [config.entities];
     this._config = { ...config, entities };
-    this._hiddenCalendars = new Set(config.hidden_entities ?? []);
     // Normalize legacy/invalid view values
     const VIEW_ALIASES: Record<string, ViewType> = { week: 'multiday', '5day': 'multiday', day: 'agenda' };
     const enabledViews = this._getEnabledViews();
@@ -162,10 +162,7 @@ export class DaylightCalendarCard extends LitElement {
     const allEvents: ProcessedEvent[] = [];
 
     try {
-      const fetches = this._config.entities
-        .filter(e => !this._config.hidden_entities?.includes(e))
-        .map(async (entityId) => {
-        const index = this._config.entities.indexOf(entityId);
+      const fetches = this._config.entities.map(async (entityId, index) => {
         const color = getCalendarColor(entityId, index, this._getPalette(), this._haColors);
         const avatar = this._getAvatar(entityId, color);
         const events = await this.hass.callApi<CalendarEvent[]>(
@@ -272,10 +269,8 @@ export class DaylightCalendarCard extends LitElement {
     if (next.has(entityId)) {
       next.delete(entityId);
     } else {
-      const visibleCount = this._config.entities.filter(
-        e => !this._config.hidden_entities?.includes(e)
-      ).length;
-      if (next.size < visibleCount - 1) {
+      // Don't allow hiding every calendar (keep at least one rendering events)
+      if (next.size < this._config.entities.length - 1) {
         next.add(entityId);
       }
     }
@@ -309,8 +304,7 @@ export class DaylightCalendarCard extends LitElement {
     if (!this._haColorsPromise) {
       this._haColorsPromise = (async () => {
         const colors: Record<string, string> = {};
-        const visible = this._config.entities.filter(e => !this._config.hidden_entities?.includes(e));
-        await Promise.all(visible.map(async (entityId) => {
+        await Promise.all(this._config.entities.map(async (entityId) => {
           try {
             const entry = await this.hass.callWS<{ options?: { calendar?: { color?: string } } }>({
               type: 'config/entity_registry/get',
@@ -356,10 +350,10 @@ export class DaylightCalendarCard extends LitElement {
     const cfg = this._config.show_legend;
     if (cfg === true) return true;
     if (cfg === false) return false;
-    const visibleCount = this._config.entities.filter(
+    const legendCount = this._config.entities.filter(
       e => !this._config.hidden_entities?.includes(e)
     ).length;
-    return visibleCount >= 2;
+    return legendCount >= 2;
   }
 
   private _onPopoverClose(): void {
@@ -508,8 +502,35 @@ export class DaylightCalendarCard extends LitElement {
                   ${this._getCalendarName(entityId)}
                 </button>
               `;
-            },
-          )}
+            })}
+          ${this._showHiddenInLegend
+            ? (this._config.hidden_entities ?? []).map((entityId) => {
+                const index = this._config.entities.indexOf(entityId);
+                const runtimeHidden = this._hiddenCalendars.has(entityId);
+                const color = getCalendarColor(entityId, index, this._getPalette(), this._haColors);
+                return html`
+                  <button
+                    class="legend-item config-hidden ${runtimeHidden ? 'hidden' : ''}"
+                    @click=${() => this._toggleCalendar(entityId)}
+                  >
+                    <span
+                      class="legend-dot"
+                      style="background: ${runtimeHidden ? 'transparent' : color}; border: 2px solid ${color};"
+                    ></span>
+                    ${this._getCalendarName(entityId)}
+                  </button>
+                `;
+              })
+            : nothing}
+          ${(this._config.hidden_entities?.length ?? 0) > 0 ? html`
+            <button
+              class="legend-overflow-pill ${this._showHiddenInLegend ? 'active' : ''}"
+              @click=${() => { this._showHiddenInLegend = !this._showHiddenInLegend; }}
+            >
+              <ha-icon icon="mdi:filter-variant"></ha-icon>
+              +${this._config.hidden_entities?.length}
+            </button>
+          ` : nothing}
         </div>` : nothing}
         <div class="content">
           ${this._error

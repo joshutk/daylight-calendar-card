@@ -192,6 +192,17 @@ export class DaylightCalendarCardEditor extends LitElement {
         <ha-expansion-panel .header=${'Advanced'} .outlined=${true}>
           <div class="panel-content">
 
+            <!-- Hidden Entities -->
+            <ha-selector
+              .hass=${this.hass}
+              .label=${'Hidden Calendars'}
+              .helper=${'Calendars to exclude from display. Keep them in Calendar Entities above for easy re-enabling.'}
+              .selector=${{ entity: { multiple: true, domain: 'calendar' } }}
+              .value=${this._config.hidden_entities ?? []}
+              .configKey=${'hidden_entities'}
+              @value-changed=${this._valueChanged}
+            ></ha-selector>
+
             <!-- Grid Height -->
             <ha-selector
               .hass=${this.hass}

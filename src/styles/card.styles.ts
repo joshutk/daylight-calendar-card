@@ -121,6 +121,42 @@ export const cardStyles = css`
     transform: scale(0.7);
   }
 
+  .legend-item.config-hidden {
+    border: 1px dashed var(--divider-color, rgba(0, 0, 0, 0.12));
+  }
+
+  .legend-overflow-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    margin-left: auto;
+    padding: 5px 12px 5px 8px;
+    border-radius: 20px;
+    border: none;
+    background: var(--secondary-background-color, rgba(0, 0, 0, 0.04));
+    color: var(--secondary-text-color);
+    font-size: calc(0.85em * var(--daylight-font-scale, 1));
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    font-family: inherit;
+  }
+
+  .legend-overflow-pill:hover {
+    background: var(--secondary-background-color, rgba(0, 0, 0, 0.08));
+    color: var(--primary-text-color);
+  }
+
+  .legend-overflow-pill.active {
+    background: var(--daylight-accent, var(--primary-color, #03a9f4));
+    color: #fff;
+  }
+
+  .legend-overflow-pill ha-icon {
+    --mdc-icon-size: calc(16px * var(--daylight-font-scale, 1));
+  }
+
   .content {
     min-height: 200px;
     color: var(--primary-text-color);
