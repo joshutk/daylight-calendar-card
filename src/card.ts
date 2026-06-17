@@ -63,6 +63,7 @@ export class DaylightCalendarCard extends LitElement {
       ? config.entities
       : [config.entities];
     this._config = { ...config, entities };
+    this._hiddenCalendars = new Set(config.hidden_entities ?? []);
     // Normalize legacy/invalid view values
     const VIEW_ALIASES: Record<string, ViewType> = { week: 'multiday', '5day': 'multiday', day: 'agenda' };
     const enabledViews = this._getEnabledViews();
@@ -161,7 +162,10 @@ export class DaylightCalendarCard extends LitElement {
     const allEvents: ProcessedEvent[] = [];
 
     try {
-      const fetches = this._config.entities.map(async (entityId, index) => {
+      const fetches = this._config.entities
+        .filter(e => !this._config.hidden_entities?.includes(e))
+        .map(async (entityId) => {
+        const index = this._config.entities.indexOf(entityId);
         const color = getCalendarColor(entityId, index, this._getPalette(), this._haColors);
         const avatar = this._getAvatar(entityId, color);
         const events = await this.hass.callApi<CalendarEvent[]>(
@@ -268,8 +272,10 @@ export class DaylightCalendarCard extends LitElement {
     if (next.has(entityId)) {
       next.delete(entityId);
     } else {
-      // Don't allow hiding all calendars
-      if (next.size < this._config.entities.length - 1) {
+      const visibleCount = this._config.entities.filter(
+        e => !this._config.hidden_entities?.includes(e)
+      ).length;
+      if (next.size < visibleCount - 1) {
         next.add(entityId);
       }
     }
@@ -303,7 +309,8 @@ export class DaylightCalendarCard extends LitElement {
     if (!this._haColorsPromise) {
       this._haColorsPromise = (async () => {
         const colors: Record<string, string> = {};
-        await Promise.all(this._config.entities.map(async (entityId) => {
+        const visible = this._config.entities.filter(e => !this._config.hidden_entities?.includes(e));
+        await Promise.all(visible.map(async (entityId) => {
           try {
             const entry = await this.hass.callWS<{ options?: { calendar?: { color?: string } } }>({
               type: 'config/entity_registry/get',
@@ -349,8 +356,10 @@ export class DaylightCalendarCard extends LitElement {
     const cfg = this._config.show_legend;
     if (cfg === true) return true;
     if (cfg === false) return false;
-    // Auto: show only if 2+ entities
-    return this._config.entities.length >= 2;
+    const visibleCount = this._config.entities.filter(
+      e => !this._config.hidden_entities?.includes(e)
+    ).length;
+    return visibleCount >= 2;
   }
 
   private _onPopoverClose(): void {
@@ -481,8 +490,10 @@ export class DaylightCalendarCard extends LitElement {
           ` : nothing}
         </div>
         ${this._shouldShowLegend() ? html`<div class="legend">
-          ${this._config.entities.map(
-            (entityId, index) => {
+          ${this._config.entities
+            .filter(entityId => !this._config.hidden_entities?.includes(entityId))
+            .map((entityId) => {
+              const index = this._config.entities.indexOf(entityId);
               const hidden = this._hiddenCalendars.has(entityId);
               const color = getCalendarColor(entityId, index, this._getPalette(), this._haColors);
               return html`

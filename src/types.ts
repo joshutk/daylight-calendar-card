@@ -32,6 +32,8 @@ export interface DaylightCardConfig {
   refresh_interval?: number;
   // Sizing
   font_scale?: number; // multiplier, default 1.0
+  // Calendars to hide from display (still listed in entities; just never shown)
+  hidden_entities?: string[];
   // Person mapping: calendar entity → person entity for avatars
   calendar_persons?: Record<string, string>;
 }
